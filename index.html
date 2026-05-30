@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>청주교대 교육대학원 공지 모니터링 시스템</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom Style Sheet -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo-area">
+                <div class="logo-icon">
+                    <i class="fa-solid fa-graduation-cap"></i>
+                </div>
+                <div class="logo-text">
+                    <h1>CJE Graduate School</h1>
+                    <p>Announcement Monitor</p>
+                </div>
+            </div>
+            <div class="header-badge">
+                <span class="pulse-indicator green" id="status-pulse"></span>
+                <span id="system-badge-text">시스템 점검 중...</span>
+            </div>
+        </header>
+
+        <!-- Main Dashboard Content -->
+        <main class="main-content">
+            
+            <!-- Status Card Grid -->
+            <section class="status-grid">
+                <!-- Card 1: System Status -->
+                <div class="status-card glow-card" id="main-status-card">
+                    <div class="card-icon status-ok" id="status-icon-container">
+                        <i class="fa-solid fa-circle-check" id="status-icon"></i>
+                    </div>
+                    <div class="card-info">
+                        <h3>시스템 상태</h3>
+                        <p class="status-value green" id="status-text">연결 중...</p>
+                        <p class="status-desc" id="status-desc-text">모니터링 에이전트가 정상 작동 중입니다.</p>
+                    </div>
+                </div>
+
+                <!-- Card 2: Last Scraped -->
+                <div class="status-card">
+                    <div class="card-icon status-time">
+                        <i class="fa-regular fa-clock"></i>
+                    </div>
+                    <div class="card-info">
+                        <h3>최근 스캔 시간</h3>
+                        <p class="status-value" id="last-scraped-time">--:--:--</p>
+                        <p class="status-desc">매 3시간 주기 자동 모니터링</p>
+                    </div>
+                </div>
+
+                <!-- Card 3: Notices Count -->
+                <div class="status-card">
+                    <div class="card-icon status-count">
+                        <i class="fa-solid fa-list-check"></i>
+                    </div>
+                    <div class="card-info">
+                        <h3>수집된 공지사항</h3>
+                        <p class="status-value" id="notices-count">0 개</p>
+                        <p class="status-desc">DB에 기록된 유효 공지 수</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Announcements Section -->
+            <section class="announcements-section">
+                <div class="section-header">
+                    <h2>
+                        <i class="fa-solid fa-bullhorn section-title-icon"></i>
+                        최근 공지사항 목록
+                    </h2>
+                    <span class="live-indicator">
+                        <span class="live-dot"></span> Live Updates
+                    </span>
+                </div>
+
+                <!-- Loading State -->
+                <div class="loading-state" id="loading-spinner">
+                    <div class="spinner"></div>
+                    <p>공지사항을 동기화하고 있습니다...</p>
+                </div>
+
+                <!-- Empty State -->
+                <div class="empty-state hidden" id="empty-state">
+                    <i class="fa-regular fa-folder-open"></i>
+                    <p>감지된 공지사항이 아직 없습니다.</p>
+                </div>
+
+                <!-- Announcement Accordion List -->
+                <div class="announcements-list hidden" id="announcements-container">
+                    <!-- Dynamic Announcements injection -->
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>© 2026 CJE Notice Monitor. Powered by Vercel & GitHub Actions.</p>
+            <div class="footer-links">
+                <a href="https://www.cje.ac.kr/elder_edu/web/board/brdList.do?menu_cd=000017" target="_blank" rel="noopener">
+                    <i class="fa-solid fa-arrow-up-right-from-square"></i> 청주교대 교육대학원 바로가기
+                </a>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Announcement Detail Modal (Premium Overlay) -->
+    <div class="modal-overlay hidden" id="notice-modal">
+        <div class="modal-card">
+            <button class="close-modal-btn" id="close-modal-btn">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div class="modal-header">
+                <span class="modal-badge" id="modal-num-badge">No. 0000</span>
+                <h3 id="modal-title">공지사항 제목</h3>
+                <div class="modal-meta">
+                    <span><i class="fa-solid fa-user-pen"></i> 작성자: <strong id="modal-writer">교육대학원</strong></span>
+                    <span><i class="fa-solid fa-calendar-day"></i> 등록일: <strong id="modal-date">2026-05-30</strong></span>
+                    <span><i class="fa-solid fa-eye"></i> 조회수: <strong id="modal-views">0</strong></span>
+                </div>
+            </div>
+            <div class="modal-body" id="modal-body-content">
+                <!-- HTML notice content goes here -->
+            </div>
+            <div class="modal-footer">
+                <a href="https://www.cje.ac.kr/elder_edu/web/board/brdList.do?menu_cd=000017" target="_blank" class="modal-action-btn">
+                    <i class="fa-solid fa-arrow-up-right-from-square"></i> 원본 게시글 보기
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Frontend logic -->
+    <script src="app.js"></script>
+</body>
+</html>
