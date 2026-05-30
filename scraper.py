@@ -167,6 +167,15 @@ def main():
             for item in cleaned_current_notices:
                 if item["num"] not in existing_ids:
                     new_notices.append(item)
+        
+        # [테스트용 임시 주입] 이메일 발송을 테스트하기 위해 임시로 새 공지를 리스트에 추가합니다.
+        new_notices.append({
+            "num": 999999,
+            "title": "[시스템 연동 테스트] 청주교대 대학원 알리미 메일 발송 성공",
+            "writer": "알리미 관리 시스템",
+            "write_dt": "2026-05-30",
+            "cont_html": "<p>이 메일은 <strong>이메일 연동 시스템이 성공적으로 가동 중임</strong>을 검증하기 위한 <strong>시스템 테스트 메일</strong>입니다.<br>이 메일이 정상적으로 도착했다면 모니터링 및 SMTP 메일 발송 연동이 무사히 안착된 것입니다! 수고하셨습니다.</p>"
+        })
                     
         print(f"Detected {len(new_notices)} new notices.")
         
