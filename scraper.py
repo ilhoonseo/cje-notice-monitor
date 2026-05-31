@@ -1,10 +1,8 @@
 import os
 import sys
 import json
-import smtplib
+import html
 import requests
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timezone, timedelta
 from bs4 import BeautifulSoup
 
@@ -14,7 +12,8 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # Configuration
 TARGET_URL = "https://www.cje.ac.kr/elder_edu/web/board/brdList.do?menu_cd=000017"
-RECIPIENT_EMAIL = "bjkanggr@gmail.com"
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "8848929626:AAHXt5i8nORAQeR2CQQEN82ZGg0JekLSJJc")
+TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "8346985929")
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 NOTICES_FILE = os.path.join(DATA_DIR, "notices.json")
 STATUS_FILE = os.path.join(DATA_DIR, "status.json")
@@ -39,47 +38,55 @@ def clean_html(html_content):
     lines = [line.strip() for line in text.splitlines() if line.strip()]
     return "\n".join(lines)
 
-def send_email(subject, body_html, body_text):
-    sender_email = os.environ.get("SENDER_EMAIL")
-    sender_password = os.environ.get("SENDER_PASSWORD")
-    
-    if not sender_email or not sender_password:
-        print("Warning: SENDER_EMAIL or SENDER_PASSWORD environment variable not set. Email not sent.")
-        print(f"Skipped email subject: {subject}")
+def send_telegram_message(title, writer, date, body_clean):
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+        print("Warning: TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID environment variable not set. Telegram message not sent.")
         return False
 
-    try:
-        # Create message
-        message = MIMEMultipart("alternative")
-        message["Subject"] = subject
-        message["From"] = sender_email
-        message["To"] = RECIPIENT_EMAIL
-        
-        # Attach parts
-        part1 = MIMEText(body_text, "plain", "utf-8")
-        part2 = MIMEText(body_html, "html", "utf-8")
-        message.attach(part1)
-        message.attach(part2)
+    # Limit message size for Telegram (4096 character limit overall)
+    # We'll crop the body_clean safely
+    max_body_len = 2500
+    body_summary = body_clean[:max_body_len]
+    if len(body_clean) > max_body_len:
+        body_summary += "\n\n...(이하 생략)..."
 
-        # Set up SMTP Server (Gmail SMTP server)
-        smtp_server = "smtp.gmail.com"
-        port = 587  # For starttls
-        
-        print(f"Connecting to SMTP server {smtp_server}:{port}...")
-        server = smtplib.SMTP(smtp_server, port, timeout=15)
-        server.starttls()  # Secure the connection
-        
-        print("Logging in to SMTP server...")
-        server.login(sender_email, sender_password)
-        
-        print(f"Sending email to {RECIPIENT_EMAIL}...")
-        server.sendmail(sender_email, RECIPIENT_EMAIL, message.as_string())
-        server.quit()
-        
-        print("Email sent successfully!")
-        return True
+    # Escape HTML special characters for Telegram HTML parse mode
+    safe_title = html.escape(title)
+    safe_writer = html.escape(writer)
+    safe_date = html.escape(date)
+    safe_body = html.escape(body_summary)
+
+    message = (
+        f"<b>🔔 [청주교대 대학원 새 공지]</b>\n\n"
+        f"📌 <b>제목:</b> {safe_title}\n"
+        f"👤 <b>작성자:</b> {safe_writer}\n"
+        f"📅 <b>등록일:</b> {safe_date}\n\n"
+        f"📝 <b>내용 요약:</b>\n"
+        f"{safe_body}\n\n"
+        f"🔗 <a href='{TARGET_URL}'>전체 게시판 보러가기</a>"
+    )
+
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    payload = {
+        "chat_id": TELEGRAM_CHAT_ID,
+        "text": message,
+        "parse_mode": "HTML",
+        "disable_web_page_preview": False
+    }
+
+    try:
+        print(f"Sending Telegram message to chat {TELEGRAM_CHAT_ID}...")
+        response = requests.post(url, json=payload, timeout=15)
+        response.raise_for_status()
+        res_json = response.json()
+        if res_json.get("ok"):
+            print("Telegram message sent successfully!")
+            return True
+        else:
+            print(f"Failed to send Telegram message: {res_json}")
+            return False
     except Exception as e:
-        print(f"Failed to send email notification: {e}")
+        print(f"Failed to send Telegram message: {e}")
         return False
 
 def scrape_board():
@@ -171,7 +178,7 @@ def main():
         print(f"Detected {len(new_notices)} new notices.")
         
         # Send notifications for new notices
-        email_failures = 0
+        telegram_failures = 0
         for item in new_notices:
             title = item["title"]
             num = item["num"]
@@ -179,69 +186,9 @@ def main():
             date = item["write_dt"]
             body_clean = clean_html(item["cont_html"])
             
-            subject = f"[청주교대 대학원 새 공지] {title}"
-            
-            # HTML Email Body
-            body_html = f"""
-            <html>
-                <body style="font-family: 'Malgun Gothic', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 20px; background-color: #f4f6f9;">
-                    <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; border: 1px solid #e1e8ed; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-                        <div style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 24px 20px; text-align: center;">
-                            <h2 style="margin: 0; font-size: 20px; font-weight: 600;">청주교육대학교 교육전문대학원</h2>
-                            <p style="margin: 4px 0 0 0; opacity: 0.9; font-size: 14px;">새로운 공지사항이 등록되었습니다.</p>
-                        </div>
-                        <div style="padding: 24px 20px;">
-                            <h3 style="margin-top: 0; color: #111827; font-size: 18px; border-bottom: 2px solid #f3f4f6; padding-bottom: 12px;">{title}</h3>
-                            
-                            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 14px;">
-                                <tr>
-                                    <td style="padding: 6px 0; color: #6b7280; width: 80px;">작성자</td>
-                                    <td style="padding: 6px 0; color: #1f2937; font-weight: 500;">{writer}</td>
-                                </tr>
-                                <tr>
-                                    <td style="padding: 6px 0; color: #6b7280;">등록일</td>
-                                    <td style="padding: 6px 0; color: #1f2937; font-weight: 500;">{date}</td>
-                                </tr>
-                            </table>
-                            
-                            <div style="background-color: #f9fafb; border-left: 4px solid #10b981; padding: 15px; margin-bottom: 24px; border-radius: 4px; font-size: 14px; white-space: pre-wrap; word-break: break-all; color: #4b5563;">
-                                {body_clean[:600]}...
-                            </div>
-                            
-                            <div style="text-align: center; margin: 30px 0 10px 0;">
-                                <a href="{TARGET_URL}" target="_blank" style="background-color: #10b981; color: white; padding: 12px 28px; text-align: center; text-decoration: none; display: inline-block; font-size: 15px; font-weight: bold; border-radius: 6px; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2);">
-                                    전체 게시판 보러가기
-                                </a>
-                            </div>
-                        </div>
-                        <div style="background-color: #f9fafb; padding: 15px; text-align: center; font-size: 12px; color: #9ca3af; border-top: 1px solid #f3f4f6;">
-                            본 메일은 청주교대 대학원 알리미 서비스에 의해 자동 발송되었습니다.
-                        </div>
-                    </div>
-                </body>
-            </html>
-            """
-            
-            # Plain text Email Body (Fallback)
-            body_text = f"""
-            [청주교육대학교 교육전문대학원 - 새 공지사항 등록 알림]
-            
-            ■ 제목: {title}
-            ■ 작성자: {writer}
-            ■ 등록일: {date}
-            
-            --------------------------------------------------
-            내용 요약:
-            {body_clean[:500]}...
-            --------------------------------------------------
-            
-            공지사항 전체를 보시려면 아래 링크를 클릭해 주세요.
-            게시판 링크: {TARGET_URL}
-            """
-            
-            email_success = send_email(subject, body_html, body_text)
-            if not email_success:
-                email_failures += 1
+            telegram_success = send_telegram_message(title, writer, date, body_clean)
+            if not telegram_success:
+                telegram_failures += 1
                 
         # Update notices local file
         save_local_notices(cleaned_current_notices)
