@@ -1,10 +1,8 @@
 import os
 import sys
 import json
-import html
 import requests
 from datetime import datetime, timezone, timedelta
-from bs4 import BeautifulSoup
 
 # Disable insecure request warning since we are disabling SSL verification for compatibility
 import urllib3
@@ -12,8 +10,6 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # Configuration
 TARGET_URL = "https://www.cje.ac.kr/elder_edu/web/board/brdList.do?menu_cd=000017"
-TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "8848929626:AAHXt5i8nORAQeR2CQQEN82ZGg0JekLSJJc")
-TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "8346985929")
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 NOTICES_FILE = os.path.join(DATA_DIR, "notices.json")
 STATUS_FILE = os.path.join(DATA_DIR, "status.json")
@@ -27,67 +23,6 @@ def get_korean_now_str():
     kst_tz = timezone(timedelta(hours=9))
     kst_now = utc_now.astimezone(kst_tz)
     return kst_now.strftime("%Y-%m-%d %H:%M:%S KST")
-
-def clean_html(html_content):
-    """Utility to convert HTML notice body to clean plain text for email preview."""
-    if not html_content:
-        return ""
-    soup = BeautifulSoup(html_content, "html.parser")
-    # Get text and replace multiple newlines/spaces
-    text = soup.get_text(separator="\n")
-    lines = [line.strip() for line in text.splitlines() if line.strip()]
-    return "\n".join(lines)
-
-def send_telegram_message(title, writer, date, body_clean):
-    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
-        print("Warning: TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID environment variable not set. Telegram message not sent.")
-        return False
-
-    # Limit message size for Telegram (4096 character limit overall)
-    # We'll crop the body_clean safely
-    max_body_len = 2500
-    body_summary = body_clean[:max_body_len]
-    if len(body_clean) > max_body_len:
-        body_summary += "\n\n...(이하 생략)..."
-
-    # Escape HTML special characters for Telegram HTML parse mode
-    safe_title = html.escape(title)
-    safe_writer = html.escape(writer)
-    safe_date = html.escape(date)
-    safe_body = html.escape(body_summary)
-
-    message = (
-        f"<b>🔔 [청주교대 대학원 새 공지]</b>\n\n"
-        f"📌 <b>제목:</b> {safe_title}\n"
-        f"👤 <b>작성자:</b> {safe_writer}\n"
-        f"📅 <b>등록일:</b> {safe_date}\n\n"
-        f"📝 <b>내용 요약:</b>\n"
-        f"{safe_body}\n\n"
-        f"🔗 <a href='{TARGET_URL}'>전체 게시판 보러가기</a>"
-    )
-
-    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-    payload = {
-        "chat_id": TELEGRAM_CHAT_ID,
-        "text": message,
-        "parse_mode": "HTML",
-        "disable_web_page_preview": False
-    }
-
-    try:
-        print(f"Sending Telegram message to chat {TELEGRAM_CHAT_ID}...")
-        response = requests.post(url, json=payload, timeout=15)
-        response.raise_for_status()
-        res_json = response.json()
-        if res_json.get("ok"):
-            print("Telegram message sent successfully!")
-            return True
-        else:
-            print(f"Failed to send Telegram message: {res_json}")
-            return False
-    except Exception as e:
-        print(f"Failed to send Telegram message: {e}")
-        return False
 
 def scrape_board():
     headers = {
@@ -169,7 +104,7 @@ def main():
         # If existing list is empty, treat as first run and do not trigger alert spam
         is_first_run = len(existing_notices) == 0
         if is_first_run:
-            print("First run detected. Storing notices without sending email notifications.")
+            print("First run detected. Storing notices without notifications.")
         else:
             for item in cleaned_current_notices:
                 if item["num"] not in existing_ids:
@@ -177,18 +112,9 @@ def main():
                     
         print(f"Detected {len(new_notices)} new notices.")
         
-        # Send notifications for new notices
-        telegram_failures = 0
+        # Gmail notification is handled independently by Google Apps Script.
         for item in new_notices:
-            title = item["title"]
-            num = item["num"]
-            writer = item["writer"]
-            date = item["write_dt"]
-            body_clean = clean_html(item["cont_html"])
-            
-            telegram_success = send_telegram_message(title, writer, date, body_clean)
-            if not telegram_success:
-                telegram_failures += 1
+            print(f"New notice detected: {item['num']} - {item['title']}")
                 
         # Update notices local file
         save_local_notices(cleaned_current_notices)
