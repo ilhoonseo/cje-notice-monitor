@@ -110,7 +110,7 @@ GitHub Actions 스크립트가 수집한 데이터를 자동으로 커밋하고 
 
 ### 2. Google Apps Script Gmail 알림
 
-`google-apps-script/CjeNotice.gs`를 Google Apps Script 프로젝트에 추가한 뒤 `setupCjeNoticeTrigger`를 한 번 실행합니다. 최초 실행은 현재 공지를 기준선으로 저장하고, 이후 3시간마다 새 공지를 찾아 Gmail로 알립니다. 수동 확인 메일은 `sendCjeSetupEmail`을 실행하면 됩니다.
+`google-apps-script/CjeNotice.gs`를 Google Apps Script 프로젝트에 추가하고, 비공개 Script Property `cje_alert_to_v1`에 수신 주소를 등록한 뒤 `setupCjeNoticeTrigger`를 한 번 실행합니다. 최초 실행은 현재 공지를 기준선으로 저장하고, 이후 3시간마다 새 공지를 찾아 Gmail로 알립니다. 수동 확인 메일은 `sendCjeSetupEmail`을 실행하면 됩니다.
 
 ---
 

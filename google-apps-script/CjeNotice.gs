@@ -1,6 +1,6 @@
 const CJE_BOARD_URL = 'https://www.cje.ac.kr/elder_edu/web/board/brdList.do?menu_cd=000017';
 const CJE_NOTICE_STATE_KEY = 'cje_notice_known_ids_v1';
-const CJE_ALERT_TO = 'dlfgns316ai@gmail.com';
+const CJE_ALERT_TO_KEY = 'cje_alert_to_v1';
 
 function checkCjeGraduateNotices() {
   const lock = LockService.getScriptLock();
@@ -90,7 +90,7 @@ function setupCjeNoticeTrigger() {
 
 function sendCjeSetupEmail() {
   MailApp.sendEmail({
-    to: CJE_ALERT_TO,
+    to: getCjeAlertTo_(),
     subject: '[알림] 청주교대 대학원 공지 모니터 설정 완료',
     body: [
       '청주교대 대학원 공지 모니터의 Gmail 발송 설정이 완료되었습니다.',
@@ -131,7 +131,7 @@ function sendCjeNoticeDigest_(notices) {
   });
 
   MailApp.sendEmail({
-    to: CJE_ALERT_TO,
+    to: getCjeAlertTo_(),
     subject: subject,
     body: [
       '청주교대 대학원에 새 공지가 등록되었습니다.',
@@ -149,6 +149,14 @@ function sendCjeNoticeDigest_(notices) {
     ].join(''),
     name: '청주교대 대학원 공지 알림'
   });
+}
+
+function getCjeAlertTo_() {
+  const recipient = PropertiesService.getScriptProperties().getProperty(CJE_ALERT_TO_KEY);
+  if (!recipient || recipient.indexOf('@') < 1) {
+    throw new Error(`Set the Apps Script property '${CJE_ALERT_TO_KEY}' to the alert email address.`);
+  }
+  return recipient.trim();
 }
 
 function cleanNoticeText_(value) {
