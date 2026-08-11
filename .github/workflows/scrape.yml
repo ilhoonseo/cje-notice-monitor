@@ -1,10 +1,7 @@
-name: Cheongju National University Notices Scraper
+name: Cheongju National University Notices Scraper (Manual Only)
 
 on:
-  schedule:
-    # Run every 3 hours (at minute 0 of every 3rd hour)
-    - cron: '0 */3 * * *'
-  workflow_dispatch: # Allows manual trigger from the GitHub Actions tab
+  workflow_dispatch: # Scheduled monitoring moved to Codex Scheduled Tasks
 
 permissions:
   contents: write # Required to allow committing and pushing changes back to the repository

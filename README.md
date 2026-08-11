@@ -2,21 +2,21 @@
 
 > **Cheongju National University of Education Graduate School Announcement Monitoring & Notification System**
 >
-> 본 프로젝트는 청주교육대학교 교육전문대학원 공지사항 게시판을 주기적으로 모니터링하여 새 공지사항을 감지하면 즉시 이메일로 알림을 보내고, 시스템 가동 상태와 최근 수집된 공지사항 목록을 한눈에 확인할 수 있는 프리미엄 Vercel 상태 페이지 대시보드를 제공합니다.
+> 본 저장소는 청주교육대학교 교육전문대학원 공지사항 상태 페이지와 수동 수집 스크립트를 제공합니다. 새 공지 확인과 Gmail 알림은 저장소 밖의 Codex 예약 작업이 담당합니다.
 
 ---
 
 ## 🌟 주요 기능
 
 1. **지능형 웹 스크래퍼 (Python)**:
-   - 대학원 공지사항 목록 API(`brdList.do`)를 3시간 주기로 자동 요청하여 실시간 공지사항 감지.
+   - 대학원 공지사항 목록 API(`brdList.do`)를 수동 요청하여 상태 페이지 데이터 갱신.
    - 중복 방지 로직 및 로컬 스토리지(`data/notices.json`) 연동을 통한 데이터 정합성 유지.
    - 한글 인코딩 자동 복원 및 SSL 인증 오류 회피 처리를 적용한 강력한 내구성.
 
-2. **Gmail 실시간 알림 (Google Apps Script)**:
-   - Google Apps Script가 3시간마다 게시판을 확인하고 새 공지 발견 시 Gmail 알림 발송.
-   - 제목, 작성자, 날짜, 본문 요약과 게시판 원본 링크를 일반 텍스트 및 HTML 형식으로 제공.
-   - 기존 Google 계정의 `MailApp`을 사용하므로 Gmail 앱 비밀번호나 GitHub Secret이 필요 없음.
+2. **Gmail 새 공지 알림 (Codex 예약 작업)**:
+   - Codex가 3시간마다 게시판을 직접 확인하고 새 공지가 있을 때만 Gmail로 알림 발송.
+   - 제목, 작성자, 날짜, 본문 요약과 게시판 원본 링크를 제공.
+   - 연결된 Gmail을 사용하므로 Gmail 앱 비밀번호나 GitHub Secret이 필요 없음.
 
 3. **프리미엄 상태 페이지 대시보드 (Vercel)**:
    - **Rich Aesthetics**: 다크 슬레이트 블루 기반의 HSL 컬러 팔레트, 세련된 글래스모피즘(Glassmorphism) 효과, 호버 인터랙션, 맥박이 뛰는 듯한(Pulsating) 실시간 라이브 인디케이터가 적용된 하이엔드 SaaS 스타일 상태 페이지.
@@ -30,7 +30,8 @@
 - **Back-end & Scraper**: Python 3.x, `requests`
 - **Front-end Dashboard**: Plain HTML5, Modern Vanilla CSS, Plain JavaScript, FontAwesome Icons, Google Fonts (Inter, Noto Sans KR)
 - **Deployment & Hosting**: Vercel (Static Web Server)
-- **Automation Cron Job**: GitHub Actions (3-Hour Interval Schedule)
+- **Scheduled Monitoring**: Codex Scheduled Tasks (3-Hour Interval)
+- **Manual Maintenance**: GitHub Actions (`workflow_dispatch` only)
 
 ---
 
@@ -39,12 +40,10 @@
 ```text
 ├── .github/
 │   └── workflows/
-│       └── scrape.yml      # GitHub Actions 자동 스케줄러 (3시간 주기)
+│       └── scrape.yml      # 필요할 때만 실행하는 수동 데이터 갱신
 ├── data/
 │   ├── notices.json        # 최근 수집된 공지사항 원본 데이터 백업 (DB 역할)
 │   └── status.json         # 모니터링 시스템의 활성 상태 및 에러 기록 파일
-├── google-apps-script/
-│   └── CjeNotice.gs        # Google Apps Script Gmail 알림 코드
 ├── app.js                  # 대시보드 인터랙션 및 Fetch API 비동기 제어 스크립트
 ├── index.html              # 상태 대시보드 기본 마크업 레이아웃
 ├── requirements.txt        # Python 의존성 라이브러리 목록
@@ -76,7 +75,7 @@ pip install -r requirements.txt
 ```
 
 ### 2. 환경 변수 구성
-GitHub 스크래퍼에는 알림용 환경 변수가 필요하지 않습니다. Gmail 알림은 `google-apps-script/CjeNotice.gs`가 별도로 담당합니다.
+GitHub 스크래퍼에는 알림용 환경 변수가 필요하지 않습니다. Gmail 알림은 저장소와 독립된 Codex 예약 작업이 담당합니다.
 
 ### 3. 수집 스크립트 1회 강제 실행
 로컬 가상환경 내에서 최초로 수집을 수행하여 로컬 데이터베이스 파일(`notices.json`, `status.json`)을 구축합니다.
@@ -84,7 +83,7 @@ GitHub 스크래퍼에는 알림용 환경 변수가 필요하지 않습니다. 
 ```bash
 python scraper.py
 ```
-> **Note**: 최초 1회 실행 시에는 기존의 모든 공지가 이메일 알림으로 스팸 발송되지 않도록 감지 데이터베이스 초기화(Setup) 기능만 조용히 수행하도록 구현되어 있습니다. 2회차 실행부터 신규 글 감지 시 이메일이 발송됩니다.
+> **Note**: 이 스크립트는 상태 페이지 데이터를 갱신할 뿐 이메일이나 텔레그램 알림을 보내지 않습니다.
 
 ### 4. 대시보드 웹서버 실행
 상태 대시보드는 정적 웹 어플리케이션으로, 단순 파일 열기 방식이 아닌 로컬 웹 서버 환경에서 로드되어야 `/data/*.json` 리소스를 정상적으로 로드(Fetch)할 수 있습니다.
@@ -97,20 +96,20 @@ python -m http.server 3000
 
 ---
 
-## 🤖 GitHub Actions 자동화 및 배포 설정
+## 🤖 GitHub Actions 수동 데이터 갱신
 
-3시간마다 주기적으로 공지사항을 감시하고 Vercel 페이지를 갱신하기 위해 GitHub 리포지토리 설정이 필수적입니다.
+GitHub의 예약 실행은 중단되어 있습니다. 상태 페이지 데이터를 수동으로 갱신할 때만 Actions 화면에서 워크플로를 실행합니다.
 
 ### 1. Actions 권한(Workflow permissions) 수정
 GitHub Actions 스크립트가 수집한 데이터를 자동으로 커밋하고 원격지에 밀어 넣을 수 있도록 권한을 변경합니다.
 - **경로**: `Settings` -> `Actions` -> `General`
 - **Workflow permissions** 섹션으로 이동하여 **Read and write permissions** 옵션을 체크하여 활성화한 후 **Save** 버튼을 클릭합니다.
 
-이제 GitHub Actions는 매 3시간마다 감지 데이터를 저장소에 커밋하여 Vercel 상태 페이지를 갱신합니다. Gmail 알림은 아래 Google Apps Script가 같은 주기로 독립 실행합니다.
+GitHub Actions는 자동으로 실행되지 않으며 Gmail 알림에도 관여하지 않습니다.
 
-### 2. Google Apps Script Gmail 알림
+### 2. Codex 예약 Gmail 알림
 
-`google-apps-script/CjeNotice.gs`를 Google Apps Script 프로젝트에 추가하고, 비공개 Script Property `cje_alert_to_v1`에 수신 주소를 등록한 뒤 `setupCjeNoticeTrigger`를 한 번 실행합니다. 최초 실행은 현재 공지를 기준선으로 저장하고, 이후 3시간마다 새 공지를 찾아 Gmail로 알립니다. 수동 확인 메일은 `sendCjeSetupEmail`을 실행하면 됩니다.
+ChatGPT/Codex의 **예약** 화면에 3시간 주기의 독립 작업을 설정합니다. 예약 작업은 대학원 게시판을 직접 확인하고, 연결된 Gmail의 기존 발송 기록을 기준으로 아직 알리지 않은 공지만 본인에게 보냅니다. GitHub Actions와 Google Apps Script는 이 과정에 사용되지 않습니다.
 
 ---
 
@@ -128,5 +127,5 @@ Vercel에 본 프로젝트를 완전 무료로 1분 만에 게시할 수 있습�
 
 ## 🔒 보안 사항
 
-- Gmail 자격증명은 저장소에 저장하지 않습니다. 메일은 Google Apps Script의 `MailApp` 권한으로만 발송합니다.
+- Gmail 자격증명과 수신 주소는 저장소에 저장하지 않습니다. 메일은 Codex에 연결된 Gmail 권한으로만 발송합니다.
 - 과거 커밋에 노출된 텔레그램 봇 토큰은 텔레그램에서 폐기해야 합니다.

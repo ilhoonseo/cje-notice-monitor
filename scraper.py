@@ -112,7 +112,7 @@ def main():
                     
         print(f"Detected {len(new_notices)} new notices.")
         
-        # Gmail notification is handled independently by Google Apps Script.
+        # Gmail notification is handled independently by a Codex scheduled task.
         for item in new_notices:
             print(f"New notice detected: {item['num']} - {item['title']}")
                 
